@@ -4,8 +4,13 @@ import { getMetaContent, scoreFromChecks } from '../utils/helpers'
 
 export function analyzeBasic(ctx: PageContext): AnalyzerResult {
   const canonical = ctx.linkRels.find((l) => l.rel === 'canonical')?.href || getMetaContent(ctx.meta, 'canonical')
-  const language = document.documentElement.lang || getMetaContent(ctx.meta, 'content-language')
-  const charset = document.characterSet || getMetaContent(ctx.meta, 'charset')
+  const language =
+    (typeof document !== 'undefined' ? document.documentElement?.lang : '') ||
+    getMetaContent(ctx.meta, 'content-language') ||
+    getMetaContent(ctx.meta, 'language')
+  const charset =
+    (typeof document !== 'undefined' ? document.characterSet : '') ||
+    getMetaContent(ctx.meta, 'charset')
   const viewport = getMetaContent(ctx.meta, 'viewport')
   const robots = getMetaContent(ctx.meta, 'robots')
 

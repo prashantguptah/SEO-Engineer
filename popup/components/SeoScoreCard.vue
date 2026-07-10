@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import type { ScoreBreakdown } from '../../types/report'
+import { computed } from 'vue'
+import type { ScoreBreakdown, ScoreHistoryPoint } from '../../types/report'
 
-defineProps<{
+const props = defineProps<{
   scores: ScoreBreakdown
   durationMs: number
+  scoreHistory?: ScoreHistoryPoint[]
 }>()
 
 function scoreColor(score: number) {
@@ -24,6 +26,24 @@ const categories = [
   { key: 'performance' as const, label: 'Performance' },
   { key: 'accessibility' as const, label: 'Accessibility' },
 ]
+
+const sparklinePoints = computed(() => {
+  const history = props.scoreHistory ?? []
+  if (history.length < 2) return ''
+  const scores = history.map((h) => h.score)
+  const min = Math.min(...scores, 0)
+  const max = Math.max(...scores, 100)
+  const range = max - min || 1
+  const w = 80
+  const h = 24
+  return scores
+    .map((s, i) => {
+      const x = (i / (scores.length - 1)) * w
+      const y = h - ((s - min) / range) * h
+      return `${x},${y}`
+    })
+    .join(' ')
+})
 </script>
 
 <template>
@@ -61,6 +81,24 @@ const categories = [
         </div>
       </div>
     </div>
+
+    <div v-if="scoreHistory && scoreHistory.length >= 2" class="mt-3 pt-3 border-t border-surface-border">
+      <div class="flex items-center justify-between">
+        <p class="text-[10px] text-slate-500 uppercase">Score history</p>
+        <p class="text-[10px] text-slate-500">{{ scoreHistory.length }} runs</p>
+      </div>
+      <svg class="w-full mt-1 h-6" viewBox="0 0 80 24" preserveAspectRatio="none">
+        <polyline
+          :points="sparklinePoints"
+          fill="none"
+          stroke="#6366f1"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+    </div>
+
     <p class="text-xs text-slate-500 mt-3 text-center">
       Analysis completed in {{ durationMs < 1000 ? `${durationMs}ms` : `${(durationMs / 1000).toFixed(1)}s` }}
     </p>

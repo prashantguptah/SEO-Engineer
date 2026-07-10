@@ -1,4 +1,6 @@
 import type { PageContext, HeadingItem, LinkItem, ImageItem } from '../types/seo'
+import { queryAllDeep, getSelector } from './dom'
+import { createEmptyEnrichment } from './enrich'
 
 export function buildPageContext(doc: Document, win: Window): PageContext {
   const url = win.location.href
@@ -24,16 +26,17 @@ export function buildPageContext(doc: Document, win: Window): PageContext {
   })
 
   const headings: HeadingItem[] = []
-  doc.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach((el) => {
+  queryAllDeep<HTMLHeadingElement>(doc, 'h1, h2, h3, h4, h5, h6').forEach((el) => {
     headings.push({
-      level: parseInt(el.tagName[1], 10),
+      level: Number.parseInt(el.tagName[1], 10),
       text: el.textContent?.trim() ?? '',
       id: el.id || undefined,
+      selector: getSelector(el),
     })
   })
 
   const links: LinkItem[] = []
-  doc.querySelectorAll('a[href]').forEach((el) => {
+  queryAllDeep<HTMLAnchorElement>(doc, 'a[href]').forEach((el) => {
     const href = el.getAttribute('href') || ''
     const rel = (el.getAttribute('rel') || '').toLowerCase()
     let isInternal = false
@@ -46,34 +49,37 @@ export function buildPageContext(doc: Document, win: Window): PageContext {
       isInternal = href.startsWith('/') || href.startsWith('#')
     }
     links.push({
-      href,
+      href: el.href || href,
       text: el.textContent?.trim() ?? '',
       rel,
       isInternal,
       isExternal,
       isNofollow: rel.includes('nofollow'),
+      selector: getSelector(el),
     })
   })
 
   const images: ImageItem[] = []
-  doc.querySelectorAll('img').forEach((el) => {
+  queryAllDeep<HTMLImageElement>(doc, 'img').forEach((el) => {
     images.push({
-      src: el.getAttribute('src') || el.getAttribute('data-src') || '',
+      src: el.currentSrc || el.getAttribute('src') || el.getAttribute('data-src') || '',
       alt: el.getAttribute('alt'),
       loading: el.getAttribute('loading'),
-      width: el.naturalWidth || parseInt(el.getAttribute('width') || '0') || null,
-      height: el.naturalHeight || parseInt(el.getAttribute('height') || '0') || null,
+      width: el.naturalWidth || Number.parseInt(el.getAttribute('width') || '0') || null,
+      height: el.naturalHeight || Number.parseInt(el.getAttribute('height') || '0') || null,
       hasSrcset: el.hasAttribute('srcset'),
+      selector: getSelector(el),
     })
   })
 
-  const paragraphs = [...doc.querySelectorAll('p')]
+  const paragraphs = queryAllDeep<HTMLParagraphElement>(doc, 'p')
     .map((p) => p.textContent?.trim() ?? '')
     .filter(Boolean)
 
   const bodyText = doc.body?.innerText ?? ''
+
   const jsonLd: unknown[] = []
-  doc.querySelectorAll('script[type="application/ld+json"]').forEach((el) => {
+  queryAllDeep<HTMLScriptElement>(doc, 'script[type="application/ld+json"]').forEach((el) => {
     try {
       jsonLd.push(JSON.parse(el.textContent || ''))
     } catch {
@@ -82,24 +88,23 @@ export function buildPageContext(doc: Document, win: Window): PageContext {
   })
 
   const microdataTypes: string[] = []
-  doc.querySelectorAll('[itemtype]').forEach((el) => {
+  queryAllDeep(doc, '[itemtype]').forEach((el) => {
     const type = el.getAttribute('itemtype') || ''
     if (type) microdataTypes.push(type)
   })
 
-  const scriptSrcs = [...doc.querySelectorAll('script[src]')].map(
-    (s) => s.getAttribute('src') || ''
+  const scriptSrcs = queryAllDeep<HTMLScriptElement>(doc, 'script[src]').map(
+    (s) => s.getAttribute('src') || '',
   )
-  const scripts = [...doc.querySelectorAll('script')].map(
-    (s) => s.src || (s.textContent?.slice(0, 300) ?? '')
+  const scripts = queryAllDeep<HTMLScriptElement>(doc, 'script').map(
+    (s) => s.src || (s.textContent?.slice(0, 300) ?? ''),
   )
-  const stylesheets = [...doc.querySelectorAll('link[rel="stylesheet"]')].map(
-    (l) => l.getAttribute('href') || ''
+  const stylesheets = queryAllDeep<HTMLLinkElement>(doc, 'link[rel="stylesheet"]').map(
+    (l) => l.getAttribute('href') || '',
   )
 
   const favicon =
-    linkRels.find((l) => l.rel.includes('icon'))?.href ||
-    '/favicon.ico'
+    linkRels.find((l) => l.rel.includes('icon'))?.href || '/favicon.ico'
 
   let faviconUrl = favicon
   try {
@@ -107,6 +112,8 @@ export function buildPageContext(doc: Document, win: Window): PageContext {
   } catch {
     faviconUrl = ''
   }
+
+  const enrichment = createEmptyEnrichment()
 
   return {
     url,
@@ -133,9 +140,6 @@ export function buildPageContext(doc: Document, win: Window): PageContext {
     microdataTypes,
     wordCount: bodyText.trim().split(/\s+/).filter(Boolean).length,
     favicon: faviconUrl,
+    ...enrichment,
   }
-}
-
-export function serializePageContext(ctx: PageContext): PageContext {
-  return { ...ctx }
 }

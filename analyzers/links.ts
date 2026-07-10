@@ -8,10 +8,18 @@ export function analyzeLinks(ctx: PageContext): AnalyzerResult {
   const nofollow = ctx.links.filter((l) => l.isNofollow)
   const emptyAnchor = ctx.links.filter((l) => !l.text.trim())
 
+  const broken = ctx.brokenLinks.filter((l) => l.broken)
+  const brokenCount = broken.length
+  const checkedCount = ctx.brokenLinks.length
+
   const anchorTexts = ctx.links
     .filter((l) => l.text.trim())
     .slice(0, 20)
-    .map((l) => ({ text: l.text.slice(0, 60), href: l.href, type: l.isInternal ? 'internal' : l.isExternal ? 'external' : 'other' }))
+    .map((l) => ({
+      text: l.text.slice(0, 60),
+      href: l.href,
+      type: l.isInternal ? 'internal' : l.isExternal ? 'external' : 'other',
+    }))
 
   const issues = []
   const strengths: string[] = []
@@ -40,13 +48,31 @@ export function analyzeLinks(ctx: PageContext): AnalyzerResult {
     })
   }
 
-  const score = scoreFromChecks([
-    internal.length >= 2,
-    internal.length >= 5,
-    external.length > 0,
-    emptyAnchor.length === 0,
-    ctx.links.length > 0,
-  ], [2, 1, 1, 2, 1])
+  if (brokenCount > 0) {
+    issues.push({
+      id: 'broken-links',
+      severity: 'high' as const,
+      problem: `${brokenCount} broken internal link(s) detected (of ${checkedCount} checked)`,
+      whyItMatters: 'Broken links waste crawl budget and hurt user experience.',
+      suggestedFix: 'Fix or remove broken internal links.',
+      category: 'links',
+      elementSelector: broken[0]?.selector,
+    })
+  } else if (checkedCount > 0) {
+    strengths.push('internal-links-good')
+  }
+
+  const score = scoreFromChecks(
+    [
+      internal.length >= 2,
+      internal.length >= 5,
+      external.length > 0,
+      emptyAnchor.length === 0,
+      ctx.links.length > 0,
+      checkedCount === 0 || brokenCount === 0,
+    ],
+    [2, 1, 1, 2, 1, 2],
+  )
 
   return {
     id: 'links',
@@ -59,7 +85,10 @@ export function analyzeLinks(ctx: PageContext): AnalyzerResult {
       internal: internal.length,
       external: external.length,
       nofollow: nofollow.length,
-      brokenLinks: 'Not checked (requires network requests)',
+      brokenLinks: brokenCount,
+      brokenLinksChecked: checkedCount,
+      brokenLinkDetails: broken.slice(0, 5),
+      enrichSkipped: ctx.enrichSkipped?.includes('broken-links') ?? false,
       anchorTexts,
     },
     issues,

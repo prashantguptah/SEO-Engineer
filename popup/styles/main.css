@@ -9,16 +9,28 @@
 html, body {
   margin: 0;
   padding: 0;
-  width: 420px;
-  height: 650px;
   overflow: hidden;
   background: #0f1117;
   color: #e2e8f0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
+/* Popup — wider for sidebar + content */
+html:not(.sidepanel), body:not(.sidepanel-body) {
+  width: 640px;
+  height: 650px;
+}
+
+/* Side panel fills available height */
+body.sidepanel-body,
+html:has(body.sidepanel-body) {
+  width: 100%;
+  height: 100%;
+  min-width: 480px;
+}
+
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 
 ::-webkit-scrollbar-track {

@@ -7,6 +7,15 @@ export interface Issue {
   whyItMatters: string
   suggestedFix: string
   category?: string
+  elementSelector?: string
+  severityReason?: string
+}
+
+export interface PositiveNote {
+  id: string
+  message: string
+  context?: string
+  category?: string
 }
 
 export interface AnalyzerResult<T = Record<string, unknown>> {
@@ -18,6 +27,7 @@ export interface AnalyzerResult<T = Record<string, unknown>> {
   data: T
   issues: Issue[]
   strengths: string[]
+  positives?: PositiveNote[]
 }
 
-export type AnalyzerFn = (ctx: import('./seo').PageContext) => AnalyzerResult
+export type AnalyzerFn = (ctx: import('./seo').PageContext) => AnalyzerResult | Promise<AnalyzerResult>

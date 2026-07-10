@@ -1,6 +1,6 @@
 import type { PageContext } from '../types/seo'
 import type { SeoReport } from '../types/report'
-import type { AnalyzerFn } from '../types/analyzer'
+import type { AnalyzerResult, AnalyzerFn } from '../types/analyzer'
 import { analyzeBasic } from './basic'
 import { analyzeTitle } from './title'
 import { analyzeHeadings } from './headings'
@@ -16,7 +16,12 @@ import { analyzeMobile } from './mobile'
 import { analyzeTechnology } from './technology'
 import { analyzeEeat } from './eeat'
 import { analyzeUxSignals } from './ux'
-import { computeScores, generateRankReasons, generateRecommendations } from './score'
+import {
+  computeScores,
+  generateRankReasons,
+  generateRecommendations,
+  generatePositives,
+} from './score'
 
 const analyzers: AnalyzerFn[] = [
   analyzeBasic,
@@ -36,11 +41,13 @@ const analyzers: AnalyzerFn[] = [
   analyzeUxSignals,
 ]
 
-export function runAnalysis(ctx: PageContext): SeoReport {
+export async function runAnalysis(ctx: PageContext): Promise<SeoReport> {
   const start = performance.now()
-  const results = analyzers.map((fn) => fn(ctx))
+  const results: AnalyzerResult[] = await Promise.all(
+    analyzers.map(async (fn) => fn(ctx)),
+  )
   const sections = Object.fromEntries(results.map((r) => [r.id, r]))
-  const scores = computeScores(results)
+  const scores = computeScores(results, ctx.pageType)
 
   return {
     url: ctx.url,
@@ -48,9 +55,12 @@ export function runAnalysis(ctx: PageContext): SeoReport {
     favicon: ctx.favicon,
     analyzedAt: new Date().toISOString(),
     durationMs: Math.round(performance.now() - start),
+    pageType: ctx.pageType,
+    enrichSkipped: ctx.enrichSkipped,
     scores,
     rankReasons: generateRankReasons(results),
+    positives: generatePositives(results),
     sections,
-    recommendations: generateRecommendations(results),
+    recommendations: generateRecommendations(results, ctx),
   }
 }

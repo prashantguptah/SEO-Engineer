@@ -8,10 +8,11 @@ export function analyzeMobile(ctx: PageContext): AnalyzerResult {
   const responsiveImages = ctx.images.filter((i) => i.hasSrcset).length
   const responsiveMeta = viewport.includes('initial-scale')
 
-  const html = ctx.html
-  const smallTouchTargets = (html.match(/(?:width|height):\s*[1-9]px/gi) || []).length
-  const fontSizeIssues = (html.match(/font-size:\s*[1-9]px/gi) || []).length
-  const mediaQueries = (html.match(/@media/gi) || []).length + (ctx.stylesheets.length > 0 ? 1 : 0)
+  const audit = ctx.mobileAudit
+  const fontSizeIssues = audit.smallFonts
+  const smallTouchTargets = audit.smallTargets
+  const mediaQueries =
+    (ctx.html.match(/@media/gi) || []).length + (ctx.stylesheets.length > 0 ? 1 : 0)
 
   const issues = []
   const strengths: string[] = []
@@ -33,21 +34,35 @@ export function analyzeMobile(ctx: PageContext): AnalyzerResult {
     issues.push({
       id: 'mobile-small-font',
       severity: 'medium' as const,
-      problem: 'Very small font sizes detected in CSS',
+      problem: `${fontSizeIssues} elements with font size below 12px (of ${audit.sampledTextElements} sampled)`,
       whyItMatters: 'Small fonts are hard to read on mobile devices.',
       suggestedFix: 'Use minimum 16px font size for body text on mobile.',
       category: 'mobile',
     })
   }
 
-  const score = scoreFromChecks([
-    hasViewport,
-    responsiveMeta,
-    mediaQueries > 0,
-    responsiveImages > 0 || ctx.images.length === 0,
-    fontSizeIssues <= 3,
-    smallTouchTargets <= 5,
-  ], [3, 1, 2, 1, 1, 1])
+  if (smallTouchTargets > 3) {
+    issues.push({
+      id: 'mobile-small-targets',
+      severity: 'medium' as const,
+      problem: `${smallTouchTargets} touch targets smaller than 44×44px (of ${audit.sampledClickables} sampled)`,
+      whyItMatters: 'Small tap targets frustrate mobile users.',
+      suggestedFix: 'Ensure buttons and links are at least 44×44 pixels.',
+      category: 'mobile',
+    })
+  }
+
+  const score = scoreFromChecks(
+    [
+      hasViewport,
+      responsiveMeta,
+      mediaQueries > 0,
+      responsiveImages > 0 || ctx.images.length === 0,
+      fontSizeIssues <= 3,
+      smallTouchTargets <= 3,
+    ],
+    [3, 1, 2, 1, 1, 1],
+  )
 
   return {
     id: 'mobile',
@@ -62,6 +77,9 @@ export function analyzeMobile(ctx: PageContext): AnalyzerResult {
       responsiveImages,
       touchTargetWarnings: smallTouchTargets,
       fontSizeWarnings: fontSizeIssues,
+      sampledTextElements: audit.sampledTextElements,
+      sampledClickables: audit.sampledClickables,
+      auditMethod: 'getComputedStyle + getBoundingClientRect',
     },
     issues,
     strengths,

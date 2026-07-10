@@ -4,19 +4,25 @@ A Chrome Extension that analyzes the currently opened webpage and explains **why
 
 ## Features
 
-- 16 analysis sections (title, headings, keywords, content, images, links, schema, technical SEO, accessibility, mobile, technology, E-E-A-T, UX, and more)
-- Rule-based SEO scoring (0–100) with weighted categories
-- "Why This Page Ranks" summary generated from analyzer strengths
-- Prioritized recommendations (HIGH / MEDIUM / LOW)
-- Dark mode SaaS-style popup UI (420×650px)
-- Copy report, download JSON, refresh analysis
-- Search and expand/collapse accordion sections
+- 16+ analysis sections (title, headings, keywords, content, images, links, schema, technical SEO, accessibility, mobile, technology, E-E-A-T, UX, and more)
+- Rule-based SEO scoring (0–100) with **page-type weighted profiles**
+- "Why This Page Ranks" + **"What's Working Well"** positives
+- Prioritized recommendations with severity tuning by page type
+- Dark mode SaaS-style UI (popup 420×650px **or Chrome side panel**)
+- Rich section views (SERP preview, headings, keywords, images, links, schema, E-E-A-T, performance)
+- Highlight elements on the live page
+- Copy Markdown / JSON, download JSON, **export PDF** (print dialog)
+- Settings: broken-link checks, hydration wait, analysis budget, **custom target keyword**
+- Score history sparkline + report cache via Chrome Storage
+- SPA hydration wait, shadow DOM traversal, broken image/link checks, n-gram keywords
+- Unit tests (`npm test`)
 
 ## Tech Stack
 
 - Vue 3 + TypeScript + Pinia + VueUse
 - Tailwind CSS
 - WXT (Chrome Extension MV3)
+- Vitest + happy-dom
 - Client-side DOM analysis only
 
 ## Setup
@@ -31,7 +37,11 @@ npm install
 npm run dev
 ```
 
-This starts WXT in watch mode and opens a browser with the extension loaded.
+## Test
+
+```bash
+npm test
+```
 
 ## Build for Production
 

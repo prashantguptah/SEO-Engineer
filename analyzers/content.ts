@@ -3,6 +3,7 @@ import type { AnalyzerResult } from '../types/analyzer'
 import { calculateReadability } from '../utils/readability'
 import { countWords, averageSentenceLength } from '../utils/keyword'
 import { scoreFromChecks } from '../utils/helpers'
+import { benchmarkWordCount } from '../utils/benchmarks'
 
 export function analyzeContent(ctx: PageContext): AnalyzerResult {
   const text = ctx.bodyText
@@ -17,12 +18,23 @@ export function analyzeContent(ctx: PageContext): AnalyzerResult {
   const quoteCount = (ctx.html.match(/<blockquote[\s>]/gi) || []).length
   const readingTime = Math.max(1, Math.ceil(wordCount / 200))
   const readability = calculateReadability(text)
+  const wordCountBenchmark = benchmarkWordCount(wordCount, ctx.pageType)
 
   const issues = []
   const strengths: string[] = []
+  const positives = []
 
-  if (wordCount >= 300) strengths.push('content-comprehensive')
-  else if (wordCount < 100) {
+  if (wordCountBenchmark.status === 'optimal') {
+    strengths.push('content-comprehensive')
+    positives.push({
+      id: 'word-count',
+      message: wordCountBenchmark.message,
+      context: 'optimal',
+      category: 'content',
+    })
+  } else if (wordCount >= 300) {
+    strengths.push('content-comprehensive')
+  } else if (wordCount < 100) {
     issues.push({
       id: 'thin-content',
       severity: 'high' as const,
@@ -42,8 +54,15 @@ export function analyzeContent(ctx: PageContext): AnalyzerResult {
     })
   }
 
-  if (readability.score >= 60) strengths.push('readability-high')
-  else if (readability.score < 40) {
+  if (readability.score >= 60) {
+    strengths.push('readability-high')
+    positives.push({
+      id: 'readability',
+      message: `Readability score is ${readability.fleschReadingEase} (${readability.grade})`,
+      context: 'optimal',
+      category: 'content',
+    })
+  } else if (readability.score < 40) {
     issues.push({
       id: 'low-readability',
       severity: 'medium' as const,
@@ -71,6 +90,7 @@ export function analyzeContent(ctx: PageContext): AnalyzerResult {
     category: 'content',
     data: {
       wordCount,
+      wordCountBenchmark,
       characterCount: charCount,
       paragraphCount,
       lists: listCount,
@@ -86,5 +106,6 @@ export function analyzeContent(ctx: PageContext): AnalyzerResult {
     },
     issues,
     strengths,
+    positives,
   }
 }

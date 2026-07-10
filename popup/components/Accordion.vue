@@ -3,6 +3,16 @@ import { computed } from 'vue'
 import AnalysisCard from './AnalysisCard.vue'
 import RankSummary from './RankSummary.vue'
 import StatusBadge from './StatusBadge.vue'
+import TitleSection from './sections/TitleSection.vue'
+import HeadingsSection from './sections/HeadingsSection.vue'
+import KeywordsSection from './sections/KeywordsSection.vue'
+import PerformanceSection from './sections/PerformanceSection.vue'
+import PositivesSection from './sections/PositivesSection.vue'
+import ImagesSection from './sections/ImagesSection.vue'
+import LinksSection from './sections/LinksSection.vue'
+import SchemaSection from './sections/SchemaSection.vue'
+import EeatSection from './sections/EeatSection.vue'
+import { useHighlight } from '../composables/useHighlight'
 import type { SeoReport } from '../../types/report'
 
 const props = defineProps<{
@@ -16,8 +26,8 @@ const emit = defineEmits<{
   toggle: [id: string]
 }>()
 
+const { highlightOnPage } = useHighlight()
 const section = computed(() => props.report.sections[props.id])
-
 const sectionScore = computed(() => section.value?.score)
 
 function scoreStatus(score: number): 'good' | 'warning' | 'error' {
@@ -44,52 +54,89 @@ function scoreStatus(score: number): 'good' | 'warning' | 'error' {
         <span class="text-sm font-medium text-slate-200">{{ title }}</span>
       </div>
       <StatusBadge
-        v-if="sectionScore !== undefined && id !== 'rank-reasons' && id !== 'recommendations'"
+        v-if="sectionScore !== undefined && !['rank-reasons', 'positives', 'recommendations'].includes(id)"
         :status="scoreStatus(sectionScore)"
         :label="String(sectionScore)"
       />
     </button>
     <div v-show="expanded" class="px-4 pb-4 animate-fade-in">
-      <!-- Rank Reasons -->
       <RankSummary v-if="id === 'rank-reasons'" :reasons="report.rankReasons" />
 
-      <!-- Recommendations -->
+      <PositivesSection v-else-if="id === 'positives'" :positives="report.positives" />
+
       <div v-else-if="id === 'recommendations'" class="space-y-3">
         <div
           v-for="rec in report.recommendations"
           :key="rec.id"
           class="p-3 rounded-lg border border-surface-border bg-surface/50"
         >
-          <div class="flex items-center gap-2 mb-2">
+          <div class="flex items-center justify-between gap-2 mb-2">
             <StatusBadge
               :status="rec.severity === 'high' ? 'error' : rec.severity === 'medium' ? 'warning' : 'info'"
               :label="rec.severity.toUpperCase()"
             />
+            <button
+              v-if="rec.elementSelector"
+              class="text-[10px] text-accent-glow hover:text-white flex items-center gap-1"
+              @click="highlightOnPage(rec.elementSelector!)"
+            >
+              Show on page
+            </button>
           </div>
           <p class="text-sm font-medium text-slate-200">{{ rec.problem }}</p>
+          <p v-if="rec.severityReason" class="text-[10px] text-slate-500 mt-1 italic">{{ rec.severityReason }}</p>
           <p class="text-xs text-slate-400 mt-1">{{ rec.whyItMatters }}</p>
           <p class="text-xs text-accent-glow mt-2">Fix: {{ rec.suggestedFix }}</p>
         </div>
         <p v-if="report.recommendations.length === 0" class="text-sm text-emerald-400">No issues found!</p>
       </div>
 
-      <!-- Headings special display -->
-      <div v-else-if="id === 'headings' && section" class="space-y-3">
-        <AnalysisCard :data="{ ...section.data, allHeadings: undefined }" />
-        <div v-if="(section.data as Record<string, unknown>).allHeadings" class="space-y-1">
-          <p class="text-xs text-slate-500 mb-2">All Headings</p>
-          <div
-            v-for="(h, i) in (section.data as { allHeadings: { level: number; text: string }[] }).allHeadings"
-            :key="i"
-            class="flex gap-2 text-xs"
-          >
-            <span class="text-accent font-mono">H{{ h.level }}</span>
-            <span class="text-slate-300 truncate">{{ h.text }}</span>
-          </div>
-        </div>
-      </div>
+      <TitleSection v-else-if="id === 'title' && section" :section="section" />
 
-      <!-- Default section -->
+      <HeadingsSection
+        v-else-if="id === 'headings' && section"
+        :headings="(section.data as { allHeadings: { level: number; text: string; selector?: string }[] }).allHeadings ?? []"
+        :counts="(section.data as { counts: Record<string, number> }).counts"
+        :missing-h1="(section.data as { missingH1: boolean }).missingH1"
+        :duplicate-h1="(section.data as { duplicateH1: boolean }).duplicateH1"
+      />
+
+      <KeywordsSection
+        v-else-if="id === 'keywords' && section"
+        :top-keywords="(section.data as { topKeywords: [] }).topKeywords"
+        :top-bigrams="(section.data as { topBigrams: [] }).topBigrams"
+        :top-trigrams="(section.data as { topTrigrams: [] }).topTrigrams"
+        :primary-keyword="(section.data as { primaryKeyword: string }).primaryKeyword"
+        :primary-type="(section.data as { primaryType: string }).primaryType"
+        :custom-target="(section.data as { customTarget?: boolean }).customTarget"
+        :placement="(section.data as { placement: Record<string, boolean> | null }).placement"
+      />
+
+      <PerformanceSection
+        v-else-if="id === 'performance' && section"
+        :data="(section.data as Record<string, unknown>) as any"
+      />
+
+      <ImagesSection
+        v-else-if="id === 'images' && section"
+        :data="(section.data as Record<string, unknown>) as any"
+      />
+
+      <LinksSection
+        v-else-if="id === 'links' && section"
+        :data="(section.data as Record<string, unknown>) as any"
+      />
+
+      <SchemaSection
+        v-else-if="id === 'schema' && section"
+        :data="(section.data as Record<string, unknown>) as any"
+      />
+
+      <EeatSection
+        v-else-if="id === 'eeat' && section"
+        :data="(section.data as Record<string, unknown>) as any"
+      />
+
       <AnalysisCard v-else-if="section" :data="section.data as Record<string, unknown>" />
     </div>
   </div>

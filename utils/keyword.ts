@@ -1,3 +1,5 @@
+import type { KeywordItem } from '../types/seo'
+
 const STOP_WORDS = new Set([
   'a', 'an', 'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with',
   'by', 'from', 'as', 'is', 'was', 'are', 'were', 'been', 'be', 'have', 'has', 'had',
@@ -24,7 +26,7 @@ export function tokenize(text: string): string[] {
     .filter((w) => w.length > 2 && !STOP_WORDS.has(w))
 }
 
-export function extractTopKeywords(text: string, limit = 10): { word: string; count: number; density: number }[] {
+export function extractTopKeywords(text: string, limit = 10): KeywordItem[] {
   const words = tokenize(text)
   const total = words.length || 1
   const freq = new Map<string, number>()
@@ -41,6 +43,46 @@ export function extractTopKeywords(text: string, limit = 10): { word: string; co
       count,
       density: Math.round((count / total) * 10000) / 100,
     }))
+}
+
+export interface PhraseItem {
+  phrase: string
+  count: number
+  density: number
+  n: number
+}
+
+export function extractTopPhrases(text: string, n: 2 | 3, limit = 10): PhraseItem[] {
+  const words = tokenize(text)
+  if (words.length < n) return []
+
+  const freq = new Map<string, number>()
+  for (let i = 0; i <= words.length - n; i++) {
+    const phrase = words.slice(i, i + n).join(' ')
+    freq.set(phrase, (freq.get(phrase) ?? 0) + 1)
+  }
+
+  const total = words.length || 1
+  return [...freq.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([phrase, count]) => ({
+      phrase,
+      count,
+      density: Math.round((count / total) * 10000) / 100,
+      n,
+    }))
+}
+
+export function pickPrimaryKeyword(
+  unigrams: KeywordItem[],
+  bigrams: PhraseItem[],
+): { keyword: string; type: 'phrase' | 'word' } {
+  const topBigram = bigrams[0]
+  if (topBigram && topBigram.count >= 2) {
+    return { keyword: topBigram.phrase, type: 'phrase' }
+  }
+  return { keyword: unigrams[0]?.word ?? '', type: 'word' }
 }
 
 export function containsKeyword(text: string, keyword: string): boolean {

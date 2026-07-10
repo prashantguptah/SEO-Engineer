@@ -9,6 +9,10 @@ export function analyzeImages(ctx: PageContext): AnalyzerResult {
   const lazyLoaded = ctx.images.filter((img) => img.loading === 'lazy').length
   const responsive = ctx.images.filter((img) => img.hasSrcset).length
 
+  const broken = ctx.brokenImages.filter((b) => b.broken)
+  const brokenCount = broken.length
+  const checkedCount = ctx.brokenImages.length
+
   const formats: Record<string, number> = {}
   for (const img of ctx.images) {
     const ext = img.src.split('?')[0].split('.').pop()?.toLowerCase() || 'unknown'
@@ -20,7 +24,7 @@ export function analyzeImages(ctx: PageContext): AnalyzerResult {
       const size = (img.width || 0) * (img.height || 0)
       return size > max.size ? { src: img.src, size, width: img.width, height: img.height } : max
     },
-    { src: '', size: 0, width: 0, height: 0 }
+    { src: '', size: 0, width: 0, height: 0 },
   )
 
   const issues = []
@@ -31,6 +35,7 @@ export function analyzeImages(ctx: PageContext): AnalyzerResult {
   }
 
   if (missingAlt > 0) {
+    const firstMissing = ctx.images.find((i) => i.alt === null)
     issues.push({
       id: 'missing-alt',
       severity: 'high' as const,
@@ -38,6 +43,7 @@ export function analyzeImages(ctx: PageContext): AnalyzerResult {
       whyItMatters: 'ALT text improves accessibility and image SEO.',
       suggestedFix: 'Add descriptive alt attributes to all images.',
       category: 'images',
+      elementSelector: firstMissing?.selector,
     })
   }
 
@@ -47,9 +53,24 @@ export function analyzeImages(ctx: PageContext): AnalyzerResult {
       severity: 'medium' as const,
       problem: `${emptyAlt} image(s) have empty ALT attributes`,
       whyItMatters: 'Empty alt may indicate decorative images not properly marked.',
-      suggestedFix: 'Use descriptive alt text or alt="" with role="presentation" for decorative images.',
+      suggestedFix:
+        'Use descriptive alt text or alt="" with role="presentation" for decorative images.',
       category: 'images',
     })
+  }
+
+  if (brokenCount > 0) {
+    issues.push({
+      id: 'broken-images',
+      severity: 'high' as const,
+      problem: `${brokenCount} broken image(s) detected (of ${checkedCount} checked)`,
+      whyItMatters: 'Broken images hurt user experience and page quality signals.',
+      suggestedFix: 'Fix image URLs or replace missing assets.',
+      category: 'images',
+      elementSelector: broken[0]?.selector,
+    })
+  } else if (checkedCount > 0) {
+    strengths.push('images-optimized')
   }
 
   if (total > 5 && lazyLoaded === 0) {
@@ -68,13 +89,17 @@ export function analyzeImages(ctx: PageContext): AnalyzerResult {
     strengths.push('images-optimized')
   }
 
-  const score = scoreFromChecks([
-    total === 0 || missingAlt === 0,
-    total === 0 || emptyAlt <= total * 0.1,
-    total === 0 || lazyLoaded > 0,
-    total === 0 || responsive > 0,
-    total === 0 || modernFormats > 0,
-  ], [3, 2, 1, 1, 1])
+  const score = scoreFromChecks(
+    [
+      total === 0 || missingAlt === 0,
+      total === 0 || emptyAlt <= total * 0.1,
+      total === 0 || lazyLoaded > 0,
+      total === 0 || responsive > 0,
+      total === 0 || modernFormats > 0,
+      checkedCount === 0 || brokenCount === 0,
+    ],
+    [3, 2, 1, 1, 1, 2],
+  )
 
   return {
     id: 'images',
@@ -90,13 +115,18 @@ export function analyzeImages(ctx: PageContext): AnalyzerResult {
       responsive,
       formats,
       largestImage: largest.src ? largest : null,
-      brokenImages: 'Not checked (client-side limitation)',
+      brokenImages: brokenCount,
+      brokenImagesChecked: checkedCount,
+      brokenImageDetails: broken.slice(0, 5),
+      enrichSkipped: ctx.enrichSkipped?.includes('broken-images') ?? false,
       recommendation:
         missingAlt > 0
           ? 'Add ALT text to all images'
-          : lazyLoaded === 0 && total > 3
-            ? 'Enable lazy loading for images'
-            : 'Image optimization looks good',
+          : brokenCount > 0
+            ? 'Fix broken image URLs'
+            : lazyLoaded === 0 && total > 3
+              ? 'Enable lazy loading for images'
+              : 'Image optimization looks good',
     },
     issues,
     strengths,

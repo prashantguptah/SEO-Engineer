@@ -1,6 +1,7 @@
 import type { PageContext } from '../types/seo'
 import type { AnalyzerResult } from '../types/analyzer'
 import { getMetaContent, scoreFromChecks, truncate } from '../utils/helpers'
+import { benchmarkRange } from '../utils/benchmarks'
 
 export function analyzeTitle(ctx: PageContext): AnalyzerResult {
   const title = ctx.title
@@ -14,11 +15,16 @@ export function analyzeTitle(ctx: PageContext): AnalyzerResult {
   const twitterTitle = getMetaContent(ctx.meta, 'twitter:title')
   const canonical = ctx.linkRels.find((l) => l.rel === 'canonical')?.href || ''
 
+  const titleBenchmark = benchmarkRange('Title', titleLength, [30, 60])
+  const descBenchmark = benchmarkRange('Meta description', descLength, [120, 160])
+
   const issues = []
   const strengths: string[] = []
+  const positives = []
 
-  if (titleLength >= 30 && titleLength <= 60) {
+  if (titleBenchmark.status === 'optimal') {
     strengths.push('title-optimized')
+    positives.push({ id: 'title-length', message: titleBenchmark.message, context: 'optimal', category: 'title' })
   } else if (!title) {
     issues.push({
       id: 'missing-title',
@@ -32,7 +38,7 @@ export function analyzeTitle(ctx: PageContext): AnalyzerResult {
     issues.push({
       id: 'title-short',
       severity: 'medium' as const,
-      problem: `Title is too short (${titleLength} characters)`,
+      problem: titleBenchmark.message,
       whyItMatters: 'Short titles may miss keyword opportunities in SERPs.',
       suggestedFix: 'Expand title to 30-60 characters with primary keywords.',
       category: 'title',
@@ -41,7 +47,7 @@ export function analyzeTitle(ctx: PageContext): AnalyzerResult {
     issues.push({
       id: 'title-long',
       severity: 'low' as const,
-      problem: `Title may be truncated (${titleLength} characters)`,
+      problem: titleBenchmark.message,
       whyItMatters: 'Long titles get cut off in search results.',
       suggestedFix: 'Keep title under 60 characters.',
       category: 'title',
@@ -61,13 +67,22 @@ export function analyzeTitle(ctx: PageContext): AnalyzerResult {
     issues.push({
       id: 'meta-desc-short',
       severity: 'medium' as const,
-      problem: `Meta description is too short (${descLength} characters)`,
+      problem: descBenchmark.message,
       whyItMatters: 'Short descriptions waste SERP snippet space.',
       suggestedFix: 'Expand meta description to 120-160 characters.',
       category: 'title',
     })
-  } else if (descLength >= 120 && descLength <= 160) {
+  } else if (descBenchmark.status === 'optimal') {
     strengths.push('metadata-proper')
+    positives.push({ id: 'meta-length', message: descBenchmark.message, context: 'optimal', category: 'title' })
+  }
+
+  if (ogTitle && ogDescription && ogImage) {
+    positives.push({
+      id: 'og-complete',
+      message: 'OpenGraph tags are complete (title, description, image)',
+      category: 'title',
+    })
   }
 
   if (!ogTitle || !ogDescription) {
@@ -113,14 +128,22 @@ export function analyzeTitle(ctx: PageContext): AnalyzerResult {
     data: {
       title: truncate(title, 80),
       titleLength,
+      titleBenchmark,
       description: truncate(description, 160),
       descriptionLength: descLength,
+      descriptionBenchmark: descBenchmark,
       openGraph: { title: ogTitle, description: ogDescription, image: ogImage },
       twitterCard: { card: twitterCard, title: twitterTitle },
       canonical: canonical || 'Not set',
       status: score >= 70 ? 'Good' : score >= 40 ? 'Needs Improvement' : 'Poor',
+      serpPreview: {
+        title: truncate(title, 60) || 'Missing title',
+        url: ctx.url,
+        description: truncate(description, 160) || 'No meta description.',
+      },
     },
     issues,
     strengths,
+    positives,
   }
 }

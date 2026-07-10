@@ -11,8 +11,8 @@ export default defineConfig({
   manifest: {
     name: 'SEO Reverse Engineer',
     description: 'Reverse engineer why a page ranks well in search engines',
-    version: '1.0.0',
-    permissions: ['activeTab', 'scripting', 'storage'],
+    version: '1.1.0',
+    permissions: ['activeTab', 'scripting', 'storage', 'sidePanel'],
     host_permissions: ['<all_urls>'],
     action: {
       default_title: 'SEO Reverse Engineer',
