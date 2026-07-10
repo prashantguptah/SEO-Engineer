@@ -1,0 +1,23 @@
+export type Severity = 'high' | 'medium' | 'low'
+
+export interface Issue {
+  id: string
+  severity: Severity
+  problem: string
+  whyItMatters: string
+  suggestedFix: string
+  category?: string
+}
+
+export interface AnalyzerResult<T = Record<string, unknown>> {
+  id: string
+  name: string
+  score: number
+  weight: number
+  category: 'content' | 'technical' | 'performance' | 'accessibility'
+  data: T
+  issues: Issue[]
+  strengths: string[]
+}
+
+export type AnalyzerFn = (ctx: import('./seo').PageContext) => AnalyzerResult

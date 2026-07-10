@@ -1,0 +1,20 @@
+{
+  "extends": "./.wxt/tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "paths": {
+      "@/*": ["./popup/*"]
+    }
+  },
+  "include": [
+    "popup/**/*",
+    "entrypoints/**/*",
+    "analyzers/**/*",
+    "utils/**/*",
+    "types/**/*",
+    "content/**/*",
+    "background/**/*"
+  ]
+}
