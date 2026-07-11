@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { KeywordMatrixRow } from '../../../analyzers/keywords'
+
 defineProps<{
   topKeywords: { word: string; count: number; density: number }[]
   topBigrams: { phrase: string; count: number; density: number }[]
@@ -6,7 +8,9 @@ defineProps<{
   primaryKeyword: string
   primaryType: string
   customTarget?: boolean
+  secondaryKeywords?: string[]
   placement: Record<string, boolean> | null
+  matrix?: KeywordMatrixRow[]
 }>()
 
 const placementLabels: Record<string, string> = {
@@ -17,7 +21,18 @@ const placementLabels: Record<string, string> = {
   inH2: 'H2',
   inFirstParagraph: 'First ¶',
   inLastParagraph: 'Last ¶',
+  inImageAlts: 'Img alts',
 }
+
+const matrixCols: { key: keyof KeywordMatrixRow['placement']; label: string }[] = [
+  { key: 'inTitle', label: 'Title' },
+  { key: 'inMeta', label: 'Meta' },
+  { key: 'inUrl', label: 'URL' },
+  { key: 'inH1', label: 'H1' },
+  { key: 'inH2', label: 'H2' },
+  { key: 'inFirst100', label: '1st 100' },
+  { key: 'inImageAlts', label: 'Alts' },
+]
 </script>
 
 <template>
@@ -28,9 +43,54 @@ const placementLabels: Record<string, string> = {
         <span v-if="customTarget" class="text-accent-glow">(custom target)</span>
       </p>
       <p class="text-sm font-medium text-accent-glow">{{ primaryKeyword || '—' }}</p>
+      <p v-if="secondaryKeywords?.length" class="text-[10px] text-slate-400 mt-1">
+        Secondary: {{ secondaryKeywords.join(', ') }}
+      </p>
     </div>
 
-    <div v-if="placement" class="flex flex-wrap gap-1.5">
+    <!-- Multi-keyword matrix -->
+    <div v-if="matrix?.length" class="overflow-x-auto rounded-lg border border-surface-border">
+      <p class="text-[10px] uppercase text-slate-500 px-2 pt-2">Placement matrix</p>
+      <table class="w-full text-[10px] mt-1">
+        <thead>
+          <tr class="text-slate-500 border-b border-surface-border">
+            <th class="text-left font-medium px-2 py-1.5">Keyword</th>
+            <th
+              v-for="col in matrixCols"
+              :key="col.key"
+              class="font-medium px-1 py-1.5 text-center"
+            >
+              {{ col.label }}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="row in matrix"
+            :key="row.keyword + row.role"
+            class="border-b border-surface-border/50 last:border-0"
+          >
+            <td class="px-2 py-1.5 text-slate-200 max-w-[90px] truncate" :title="row.keyword">
+              <span
+                class="text-[8px] uppercase mr-1"
+                :class="row.role === 'primary' ? 'text-accent-glow' : 'text-slate-500'"
+              >{{ row.role === 'primary' ? 'P' : 'S' }}</span>
+              {{ row.keyword }}
+            </td>
+            <td
+              v-for="col in matrixCols"
+              :key="col.key"
+              class="text-center px-1 py-1.5"
+              :class="row.placement[col.key] ? 'text-emerald-400' : 'text-slate-600'"
+            >
+              {{ row.placement[col.key] ? '✓' : '·' }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div v-else-if="placement" class="flex flex-wrap gap-1.5">
       <span
         v-for="(val, key) in placement"
         :key="key"

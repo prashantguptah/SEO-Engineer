@@ -3,6 +3,7 @@ import type { ScoreBreakdown } from '../types/report'
 import type { PageContext, PageType } from '../types/seo'
 import { clamp, sortBySeverity } from '../utils/helpers'
 import { tuneAllIssues } from '../utils/severity'
+import { attachFixSnippets } from '../utils/fix-snippets'
 
 const STRENGTH_LABELS: Record<string, string> = {
   'https-enabled': 'HTTPS enabled',
@@ -41,7 +42,7 @@ const ANALYZER_WEIGHT_MULTIPLIERS: Record<PageType, Record<string, number>> = {
 export function computeScores(results: AnalyzerResult[], pageType: PageType): ScoreBreakdown {
   const categoryMap: Record<string, string[]> = {
     content: ['content', 'keywords', 'headings', 'images', 'eeat', 'ux'],
-    technical: ['basic', 'title', 'schema', 'technical', 'technology'],
+    technical: ['basic', 'title', 'schema', 'technical', 'technology', 'hreflang'],
     performance: ['performance'],
     accessibility: ['accessibility', 'mobile'],
   }
@@ -130,7 +131,7 @@ export function generatePositives(results: AnalyzerResult[]): PositiveNote[] {
 export function generateRecommendations(results: AnalyzerResult[], ctx: PageContext): Issue[] {
   const allIssues = results.flatMap((r) => r.issues)
   const tuned = tuneAllIssues(allIssues, ctx)
-  return sortBySeverity(tuned)
+  return attachFixSnippets(sortBySeverity(tuned), ctx)
 }
 
 export function getPageTypeLabel(pageType: PageType): string {

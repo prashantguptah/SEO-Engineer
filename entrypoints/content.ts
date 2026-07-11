@@ -2,10 +2,12 @@ import { buildPageContext } from '../utils/parser'
 import { enrichPageContext } from '../utils/enrich'
 import { waitForStableDom } from '../utils/dom'
 import { runAnalysis } from '../analyzers/analyzer.service'
+import { showOverlay, clearOverlay, type OverlayMarker } from '../utils/overlay'
 import {
   DEFAULT_ENRICH_OPTIONS,
   DEFAULT_SETTINGS,
   SETTINGS_STORAGE_KEY,
+  parseKeywordList,
   type EnrichOptions,
   type ExtensionSettings,
 } from '../types/settings'
@@ -49,7 +51,7 @@ async function loadSettings(): Promise<ExtensionSettings> {
 }
 
 async function executeAnalysis(
-  options?: EnrichOptions & { targetKeyword?: string },
+  options?: EnrichOptions & { targetKeyword?: string; secondaryKeywords?: string | string[] },
 ): Promise<{ report?: Awaited<ReturnType<typeof runAnalysis>>; error?: string }> {
   try {
     const settings = await loadSettings()
@@ -59,6 +61,7 @@ async function executeAnalysis(
       analysisBudgetMs: options?.analysisBudgetMs ?? settings.analysisBudgetMs,
       hydrationWaitMs: options?.hydrationWaitMs ?? settings.hydrationWaitMs,
       targetKeyword: options?.targetKeyword ?? settings.targetKeyword,
+      secondaryKeywords: options?.secondaryKeywords ?? settings.secondaryKeywords,
     }
 
     const waitMs = enrichOpts.hydrationWaitMs ?? DEFAULT_ENRICH_OPTIONS.hydrationWaitMs
@@ -67,6 +70,10 @@ async function executeAnalysis(
     let ctx = buildPageContext(document, window)
     if (enrichOpts.targetKeyword) {
       ctx.targetKeyword = enrichOpts.targetKeyword
+    }
+    const secondary = parseKeywordList(enrichOpts.secondaryKeywords)
+    if (secondary.length) {
+      ctx.secondaryKeywords = secondary
     }
     ctx = await enrichPageContext(ctx, document, window, enrichOpts)
 
@@ -92,6 +99,15 @@ export default defineContentScript({
       }
       if (message.type === 'HIGHLIGHT_ELEMENT') {
         sendResponse(highlightElement(message.selector))
+        return true
+      }
+      if (message.type === 'SHOW_OVERLAY') {
+        const markers = (message.markers ?? []) as OverlayMarker[]
+        sendResponse(showOverlay(markers))
+        return true
+      }
+      if (message.type === 'CLEAR_OVERLAY') {
+        sendResponse(clearOverlay())
         return true
       }
     })

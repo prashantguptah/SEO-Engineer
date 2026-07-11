@@ -2,6 +2,10 @@
 import { computed } from 'vue'
 import type { AnalyzerResult } from '../../types/analyzer'
 import type { BenchmarkResult } from '../../utils/benchmarks'
+import SocialPreviewCards, {
+  type OpenGraphPreview,
+  type TwitterPreview,
+} from './SocialPreviewCards.vue'
 
 const props = defineProps<{
   section: AnalyzerResult
@@ -14,6 +18,10 @@ const data = computed(() => props.section.data as {
   descriptionBenchmark: BenchmarkResult
   canonical: string
   serpPreview?: { title: string; url: string; description: string }
+  socialPreview?: {
+    openGraph: OpenGraphPreview
+    twitter: TwitterPreview
+  }
 })
 
 function barColor(len: number, min: number, max: number) {
@@ -55,6 +63,12 @@ function truncateMarker(max: number, scaleMax: number) {
         <span v-if="data.descriptionLength > 160" class="text-red-500 text-[10px]">…truncated</span>
       </p>
     </div>
+
+    <SocialPreviewCards
+      v-if="data.socialPreview"
+      :open-graph="data.socialPreview.openGraph"
+      :twitter="data.socialPreview.twitter"
+    />
 
     <!-- Character meters -->
     <div class="space-y-3">

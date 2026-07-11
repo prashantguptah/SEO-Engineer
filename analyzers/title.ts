@@ -3,6 +3,15 @@ import type { AnalyzerResult } from '../types/analyzer'
 import { getMetaContent, scoreFromChecks, truncate } from '../utils/helpers'
 import { benchmarkRange } from '../utils/benchmarks'
 
+function resolveImageUrl(src: string, origin: string): string {
+  if (!src) return ''
+  try {
+    return new URL(src, origin).href
+  } catch {
+    return src
+  }
+}
+
 export function analyzeTitle(ctx: PageContext): AnalyzerResult {
   const title = ctx.title
   const titleLength = title.length
@@ -10,9 +19,17 @@ export function analyzeTitle(ctx: PageContext): AnalyzerResult {
   const descLength = description.length
   const ogTitle = getMetaContent(ctx.meta, 'og:title')
   const ogDescription = getMetaContent(ctx.meta, 'og:description')
-  const ogImage = getMetaContent(ctx.meta, 'og:image')
+  const ogImageRaw = getMetaContent(ctx.meta, 'og:image')
+  const ogImage = resolveImageUrl(ogImageRaw, ctx.origin)
+  const ogUrl = getMetaContent(ctx.meta, 'og:url')
+  const ogSiteName = getMetaContent(ctx.meta, 'og:site_name')
+  const ogType = getMetaContent(ctx.meta, 'og:type')
   const twitterCard = getMetaContent(ctx.meta, 'twitter:card')
   const twitterTitle = getMetaContent(ctx.meta, 'twitter:title')
+  const twitterDescription = getMetaContent(ctx.meta, 'twitter:description')
+  const twitterImageRaw =
+    getMetaContent(ctx.meta, 'twitter:image') || getMetaContent(ctx.meta, 'twitter:image:src')
+  const twitterImage = resolveImageUrl(twitterImageRaw, ctx.origin)
   const canonical = ctx.linkRels.find((l) => l.rel === 'canonical')?.href || ''
 
   const titleBenchmark = benchmarkRange('Title', titleLength, [30, 60])
@@ -119,6 +136,13 @@ export function analyzeTitle(ctx: PageContext): AnalyzerResult {
     !!canonical,
   ])
 
+  const ogPreviewTitle = ogTitle || title
+  const ogPreviewDescription = ogDescription || description
+  const twitterPreviewTitle = twitterTitle || ogTitle || title
+  const twitterPreviewDescription = twitterDescription || ogDescription || description
+  const twitterPreviewImage = twitterImage || ogImage
+  const cardType = twitterCard || (twitterPreviewImage ? 'summary_large_image' : 'summary')
+
   return {
     id: 'title',
     name: 'Title & Meta',
@@ -132,8 +156,47 @@ export function analyzeTitle(ctx: PageContext): AnalyzerResult {
       description: truncate(description, 160),
       descriptionLength: descLength,
       descriptionBenchmark: descBenchmark,
-      openGraph: { title: ogTitle, description: ogDescription, image: ogImage },
-      twitterCard: { card: twitterCard, title: twitterTitle },
+      openGraph: {
+        title: ogTitle,
+        description: ogDescription,
+        image: ogImage,
+        url: ogUrl,
+        siteName: ogSiteName,
+        type: ogType,
+      },
+      twitterCard: {
+        card: twitterCard,
+        title: twitterTitle,
+        description: twitterDescription,
+        image: twitterImage,
+      },
+      socialPreview: {
+        openGraph: {
+          title: ogPreviewTitle || 'Missing title',
+          description: ogPreviewDescription || 'No description.',
+          image: ogImage,
+          url: ogUrl || ctx.url,
+          siteName: ogSiteName || ctx.hostname,
+          missing: {
+            title: !ogTitle,
+            description: !ogDescription,
+            image: !ogImage,
+          },
+        },
+        twitter: {
+          card: cardType,
+          title: twitterPreviewTitle || 'Missing title',
+          description: twitterPreviewDescription || 'No description.',
+          image: twitterPreviewImage,
+          domain: ctx.hostname,
+          missing: {
+            card: !twitterCard,
+            title: !twitterTitle && !ogTitle,
+            description: !twitterDescription && !ogDescription,
+            image: !twitterImage && !ogImage,
+          },
+        },
+      },
       canonical: canonical || 'Not set',
       status: score >= 70 ? 'Good' : score >= 40 ? 'Needs Improvement' : 'Poor',
       serpPreview: {

@@ -1,26 +1,33 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import SeoScoreCard from './SeoScoreCard.vue'
+import DiffSummary from './DiffSummary.vue'
 import SectionPanel from './SectionPanel.vue'
 import SettingsPanel from './SettingsPanel.vue'
+import HistoryPanel from './HistoryPanel.vue'
+import ComparePanel from './ComparePanel.vue'
 import { useReportStore } from '../stores/report'
 import type { SeoReport } from '../../types/report'
 
 const props = defineProps<{
-  report: SeoReport
+  report?: SeoReport | null
   targetKeyword?: string
 }>()
 
 const emit = defineEmits<{
   'settings-saved': []
   'settings-close': []
+  analyze: []
 }>()
 
 const store = useReportStore()
 
 const tab = computed(() => store.activeNavTab)
 const isSettings = computed(() => store.activeTab === 'settings')
+const isHistory = computed(() => store.activeTab === 'history')
+const isCompare = computed(() => store.activeTab === 'compare')
 const isOverview = computed(() => store.activeTab === 'overview')
+const isToolTab = computed(() => isSettings.value || isHistory.value || isCompare.value)
 </script>
 
 <template>
@@ -31,7 +38,11 @@ const isOverview = computed(() => store.activeTab === 'overview')
       @saved="emit('settings-saved')"
     />
 
-    <template v-else>
+    <HistoryPanel v-else-if="isHistory" />
+
+    <ComparePanel v-else-if="isCompare" />
+
+    <template v-else-if="report">
       <div class="flex items-center justify-between gap-2">
         <h2 class="text-sm font-semibold text-white">{{ tab.label }}</h2>
         <span
@@ -48,6 +59,7 @@ const isOverview = computed(() => store.activeTab === 'overview')
           :duration-ms="report.durationMs"
           :score-history="report.scoreHistory"
         />
+        <DiffSummary v-if="report.reportDiff" :diff="report.reportDiff" />
         <div
           v-if="targetKeyword"
           class="text-[10px] px-2 py-1 rounded bg-accent/10 border border-accent/20 text-accent-glow"
@@ -68,5 +80,19 @@ const isOverview = computed(() => store.activeTab === 'overview')
         />
       </div>
     </template>
+
+    <div
+      v-else-if="!isToolTab"
+      class="flex flex-col items-center justify-center gap-3 text-center py-12"
+    >
+      <p class="text-sm text-slate-300">Auto-analyze is off</p>
+      <p class="text-xs text-slate-500">Click Analyze to run a report for this page.</p>
+      <button
+        class="px-4 py-2 text-sm bg-accent hover:bg-accent-glow text-white rounded-lg"
+        @click="emit('analyze')"
+      >
+        Analyze page
+      </button>
+    </div>
   </div>
 </template>

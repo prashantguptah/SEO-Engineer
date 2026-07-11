@@ -14,6 +14,7 @@ export const SECTION_TITLES: Record<string, string> = {
   links: 'Links',
   schema: 'Structured Data',
   technical: 'Technical SEO',
+  hreflang: 'Hreflang',
   accessibility: 'Accessibility',
   mobile: 'Mobile',
   technology: 'Technology Detection',
@@ -35,6 +36,8 @@ export type TabId =
   | 'accessibility'
   | 'signals'
   | 'fixes'
+  | 'history'
+  | 'compare'
   | 'settings'
 
 export interface NavTab {
@@ -78,8 +81,8 @@ export const NAV_TABS: NavTab[] = [
   {
     id: 'indexability',
     label: 'Indexability',
-    sections: ['basic', 'title', 'technical'],
-    issueCategories: ['basic', 'title', 'technical'],
+    sections: ['basic', 'title', 'technical', 'hreflang'],
+    issueCategories: ['basic', 'title', 'technical', 'hreflang'],
     group: 'main',
   },
   {
@@ -131,6 +134,18 @@ export const NAV_TABS: NavTab[] = [
     group: 'main',
   },
   {
+    id: 'history',
+    label: 'History',
+    sections: [],
+    group: 'tools',
+  },
+  {
+    id: 'compare',
+    label: 'Compare',
+    sections: [],
+    group: 'tools',
+  },
+  {
     id: 'settings',
     label: 'Settings',
     sections: [],
@@ -144,6 +159,8 @@ export const useReportStore = defineStore('report', () => {
   const error = ref<string | null>(null)
   const activeTab = ref<TabId>('overview')
   const searchQuery = ref('')
+  /** Pre-select this History entry when opening Compare */
+  const compareTargetId = ref<string | null>(null)
 
   const allSectionIds = Object.keys(SECTION_TITLES)
 
@@ -205,6 +222,11 @@ export const useReportStore = defineStore('report', () => {
     activeTab.value = id
   }
 
+  function openCompare(entryId?: string) {
+    if (entryId) compareTargetId.value = entryId
+    activeTab.value = 'compare'
+  }
+
   function setReport(data: SeoReport) {
     report.value = data
     loading.value = false
@@ -226,6 +248,7 @@ export const useReportStore = defineStore('report', () => {
     error,
     activeTab,
     searchQuery,
+    compareTargetId,
     allSectionIds,
     mainTabs,
     toolTabs,
@@ -233,6 +256,7 @@ export const useReportStore = defineStore('report', () => {
     tabBadges,
     filteredTabs,
     setActiveTab,
+    openCompare,
     setReport,
     setError,
     setLoading,

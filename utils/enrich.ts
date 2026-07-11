@@ -4,11 +4,17 @@ import type {
   BrokenImageResult,
   BrokenLinkResult,
   MobileAudit,
+  RobotsTxtResult,
+  SitemapPeekResult,
+  HreflangEntry,
+  LabWebVitals,
 } from '../types/seo'
 import type { EnrichOptions } from '../types/settings'
 import { DEFAULT_ENRICH_OPTIONS } from '../types/settings'
 import { queryAllDeep, getSelector, withTimeout } from './dom'
 import { detectPageType } from './page-type'
+import { enrichRobotsAndSitemap } from './robots'
+import { collectLabWebVitals, EMPTY_LAB_WEB_VITALS } from './web-vitals'
 
 export function collectResourceTiming(win: Window): ResourceTimingSummary {
   const entries = win.performance.getEntriesByType('resource') as PerformanceResourceTiming[]
@@ -230,10 +236,14 @@ export async function enrichPageContext(
   const linksPromise = opts.checkBrokenLinks
     ? checkBrokenLinks(doc, ctx.origin, opts.maxLinks, opts.linkTimeoutMs)
     : Promise.resolve([] as BrokenLinkResult[])
+  const robotsPromise = enrichRobotsAndSitemap(ctx.origin, ctx.pathname, ctx.url)
+  const vitalsPromise = collectLabWebVitals(win, doc, 400)
 
-  const [imagesResult, linksResult] = await Promise.all([
+  const [imagesResult, linksResult, robotsResult, vitalsResult] = await Promise.all([
     withTimeout(imagesPromise, opts.analysisBudgetMs, 'broken-images'),
     withTimeout(linksPromise, opts.analysisBudgetMs, 'broken-links'),
+    withTimeout(robotsPromise, opts.analysisBudgetMs, 'robots-sitemap'),
+    withTimeout(vitalsPromise, Math.min(opts.analysisBudgetMs, 2000), 'web-vitals'),
   ])
 
   if (imagesResult.timedOut) {
@@ -252,6 +262,22 @@ export async function enrichPageContext(
     ctx.brokenLinks = linksResult.result ?? []
   }
 
+  if (robotsResult.timedOut || !robotsResult.result) {
+    enrichSkipped.push('robots-sitemap')
+    ctx.robotsTxt = EMPTY_ROBOTS
+    ctx.sitemap = EMPTY_SITEMAP
+  } else {
+    ctx.robotsTxt = robotsResult.result.robotsTxt
+    ctx.sitemap = robotsResult.result.sitemap
+  }
+
+  if (vitalsResult.timedOut || !vitalsResult.result) {
+    enrichSkipped.push('web-vitals')
+    ctx.webVitals = EMPTY_LAB_WEB_VITALS
+  } else {
+    ctx.webVitals = vitalsResult.result
+  }
+
   ctx.mobileAudit = analyzeMobileElements(doc)
 
   if (enrichSkipped.length > 0) {
@@ -261,9 +287,33 @@ export async function enrichPageContext(
   return ctx
 }
 
+const EMPTY_ROBOTS: RobotsTxtResult = {
+  fetched: false,
+  sitemaps: [],
+  disallowsCurrentPath: false,
+  matchingDisallows: [],
+  allowsCurrentPath: true,
+  error: 'Skipped',
+}
+
+const EMPTY_SITEMAP: SitemapPeekResult = {
+  fetched: false,
+  sampleUrls: [],
+  urlCount: 0,
+  error: 'Skipped',
+}
+
 export function createEmptyEnrichment(): Pick<
   PageContext,
-  'pageType' | 'resourceTiming' | 'brokenImages' | 'brokenLinks' | 'mobileAudit'
+  | 'pageType'
+  | 'resourceTiming'
+  | 'brokenImages'
+  | 'brokenLinks'
+  | 'mobileAudit'
+  | 'hreflang'
+  | 'robotsTxt'
+  | 'sitemap'
+  | 'webVitals'
 > {
   return {
     pageType: 'unknown',
@@ -271,5 +321,9 @@ export function createEmptyEnrichment(): Pick<
     brokenImages: [],
     brokenLinks: [],
     mobileAudit: EMPTY_MOBILE_AUDIT,
+    hreflang: [] as HreflangEntry[],
+    robotsTxt: EMPTY_ROBOTS,
+    sitemap: EMPTY_SITEMAP,
+    webVitals: EMPTY_LAB_WEB_VITALS as LabWebVitals,
   }
 }

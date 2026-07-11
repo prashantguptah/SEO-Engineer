@@ -41,4 +41,21 @@ describe('analyzeKeywords', () => {
     )
     expect(result.issues.some((i) => i.id === 'keyword-not-in-title')).toBe(true)
   })
+
+  it('builds a placement matrix for primary and secondary keywords', () => {
+    const result = analyzeKeywords(
+      createMockContext({
+        targetKeyword: 'seo guide',
+        secondaryKeywords: ['keyword research', 'on-page'],
+      }),
+    )
+    const data = result.data as {
+      matrix: { keyword: string; role: string; hitCount: number }[]
+      secondaryKeywords: string[]
+    }
+    expect(data.secondaryKeywords).toEqual(['keyword research', 'on-page'])
+    expect(data.matrix.length).toBe(3)
+    expect(data.matrix[0].role).toBe('primary')
+    expect(data.matrix.some((r) => r.role === 'secondary')).toBe(true)
+  })
 })

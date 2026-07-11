@@ -11,6 +11,7 @@ import { analyzeLinks } from './links'
 import { analyzeSchema } from './schema'
 import { analyzePerformance } from './performance'
 import { analyzeTechnical } from './technical'
+import { analyzeHreflang } from './hreflang'
 import { analyzeAccessibility } from './accessibility'
 import { analyzeMobile } from './mobile'
 import { analyzeTechnology } from './technology'
@@ -34,6 +35,7 @@ const analyzers: AnalyzerFn[] = [
   analyzeSchema,
   analyzePerformance,
   analyzeTechnical,
+  analyzeHreflang,
   analyzeAccessibility,
   analyzeMobile,
   analyzeTechnology,

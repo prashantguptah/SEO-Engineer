@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { onMounted, watch } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useReportStore } from '../stores/report'
 import { useAnalysis } from '../composables/useAnalysis'
 import { useToast } from '../composables/useToast'
 import { useSettings } from '../composables/useSettings'
+import { useOverlay } from '../composables/useOverlay'
 import LoadingScreen from './LoadingScreen.vue'
 import TabNav from './TabNav.vue'
 import TabPanel from './TabPanel.vue'
@@ -17,7 +18,17 @@ const props = withDefaults(
 const store = useReportStore()
 const { message, toast } = useToast()
 const { settings, loadSettings } = useSettings()
-const { analyze, copyReportJson, copyReportMarkdown, downloadReport, exportPdf } = useAnalysis()
+const { analyze, loadCachedOnly, copyReportJson, copyReportMarkdown, downloadReport, exportPdf } =
+  useAnalysis()
+const { active: overlayActive, toggleOverlay } = useOverlay()
+
+const showShell = computed(
+  () =>
+    !!store.report ||
+    !!store.error ||
+    (!store.loading && !settings.value.autoAnalyzeOnOpen) ||
+    ['history', 'settings', 'compare'].includes(store.activeTab),
+)
 
 onMounted(async () => {
   await loadSettings()
@@ -34,7 +45,12 @@ onMounted(async () => {
       // fall through to popup analysis
     }
   }
-  analyze()
+
+  if (settings.value.autoAnalyzeOnOpen) {
+    await analyze()
+  } else {
+    await loadCachedOnly()
+  }
 })
 
 function formatPageType(type: string) {
@@ -57,7 +73,13 @@ async function onSettingsSaved() {
 watch(
   () => store.filteredTabs,
   (tabs) => {
-    if (store.activeTab === 'settings') return
+    if (
+      store.activeTab === 'settings' ||
+      store.activeTab === 'history' ||
+      store.activeTab === 'compare'
+    ) {
+      return
+    }
     if (tabs.length && !tabs.some((t) => t.id === store.activeTab)) {
       store.setActiveTab(tabs[0].id)
     }
@@ -88,10 +110,18 @@ watch(
         </div>
         <div class="flex-1 min-w-0">
           <h1 class="text-sm font-semibold text-white truncate">
-            {{ store.report?.title || 'Analyzing page…' }}
+            {{
+              store.report?.title ||
+              (store.loading ? 'Analyzing page…' : 'SEO Reverse Engineer')
+            }}
           </h1>
           <p class="text-xs text-slate-500 truncate">
-            {{ store.report?.url || 'Waiting for analysis…' }}
+            {{
+              store.report?.url ||
+              (settings.autoAnalyzeOnOpen
+                ? 'Waiting for analysis…'
+                : 'Auto-analyze off — click Refresh to analyze')
+            }}
           </p>
           <p v-if="store.report?.pageType" class="text-[10px] text-accent-glow mt-0.5">
             {{ formatPageType(store.report.pageType) }}
@@ -105,50 +135,53 @@ watch(
 
     <!-- Body -->
     <div class="flex-1 flex min-h-0">
-      <LoadingScreen v-if="store.loading && !store.report" class="flex-1" />
+      <LoadingScreen v-if="store.loading && !store.report && !showShell" class="flex-1" />
 
-      <div
-        v-else-if="store.error && !store.report"
-        class="flex-1 flex flex-col items-center justify-center gap-4 text-center px-4"
-      >
-        <p class="text-sm text-red-400">{{ store.error }}</p>
-        <button
-          class="px-4 py-2 text-sm bg-accent hover:bg-accent-glow text-white rounded-lg"
-          @click="analyze(false)"
-        >
-          Retry Analysis
-        </button>
-      </div>
-
-      <template v-else-if="store.report">
+      <template v-else>
         <TabNav :tabs="store.filteredTabs" :tool-tabs="store.toolTabs" />
 
         <div class="flex-1 flex flex-col min-w-0 min-h-0">
-          <div v-if="store.loading" class="px-4 pt-2">
-            <p class="text-[10px] text-accent-glow animate-pulse">Refreshing analysis...</p>
+          <div
+            v-if="store.error && !store.report"
+            class="flex-1 flex flex-col items-center justify-center gap-4 text-center px-4"
+          >
+            <p class="text-sm text-red-400">{{ store.error }}</p>
+            <button
+              class="px-4 py-2 text-sm bg-accent hover:bg-accent-glow text-white rounded-lg"
+              @click="analyze(false)"
+            >
+              Retry Analysis
+            </button>
           </div>
 
-          <div class="px-3 pt-2">
-            <input
-              v-model="store.searchQuery"
-              type="text"
-              placeholder="Filter tabs..."
-              class="w-full px-3 py-1.5 text-xs bg-surface-raised border border-surface-border rounded-lg text-slate-300 placeholder-slate-500 focus:outline-none focus:border-accent/50"
+          <template v-else>
+            <div v-if="store.report && store.loading" class="px-4 pt-2">
+              <p class="text-[10px] text-accent-glow animate-pulse">Refreshing analysis...</p>
+            </div>
+
+            <div v-if="store.report" class="px-3 pt-2">
+              <input
+                v-model="store.searchQuery"
+                type="text"
+                placeholder="Filter tabs..."
+                class="w-full px-3 py-1.5 text-xs bg-surface-raised border border-surface-border rounded-lg text-slate-300 placeholder-slate-500 focus:outline-none focus:border-accent/50"
+              />
+            </div>
+
+            <TabPanel
+              :report="store.report"
+              :target-keyword="settings.targetKeyword"
+              @settings-saved="onSettingsSaved"
+              @analyze="analyze(false)"
             />
-          </div>
-
-          <TabPanel
-            :report="store.report"
-            :target-keyword="settings.targetKeyword"
-            @settings-saved="onSettingsSaved"
-          />
+          </template>
         </div>
       </template>
     </div>
 
     <!-- Footer -->
     <footer
-      v-if="store.report && store.activeTab !== 'settings'"
+      v-if="store.report && store.activeTab !== 'settings' && store.activeTab !== 'history' && store.activeTab !== 'compare'"
       class="flex-shrink-0 px-3 py-2 border-t border-surface-border"
     >
       <div class="flex gap-2 flex-wrap">
@@ -175,6 +208,17 @@ watch(
           @click="downloadReport"
         >
           JSON
+        </button>
+        <button
+          class="flex-1 min-w-[64px] px-2 py-1.5 text-[10px] font-medium rounded-lg border"
+          :class="
+            overlayActive
+              ? 'bg-amber-400/20 border-amber-400/40 text-amber-300'
+              : 'bg-surface-raised border-surface-border text-slate-300 hover:bg-surface-border'
+          "
+          @click="toggleOverlay(store.report)"
+        >
+          {{ overlayActive ? 'Clear overlay' : 'Overlay' }}
         </button>
         <button
           class="flex-1 min-w-[64px] px-2 py-1.5 text-[10px] font-medium bg-accent hover:bg-accent-glow text-white rounded-lg"

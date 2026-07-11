@@ -9,6 +9,8 @@ export interface Issue {
   category?: string
   elementSelector?: string
   severityReason?: string
+  /** Paste-ready HTML snippet when available */
+  fixSnippet?: string
 }
 
 export interface PositiveNote {

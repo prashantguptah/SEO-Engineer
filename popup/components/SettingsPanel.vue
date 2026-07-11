@@ -87,6 +87,17 @@ async function reset() {
       <span class="text-[10px] text-slate-500">Overrides auto-detected primary keyword for placement checks</span>
     </label>
 
+    <label class="block text-xs space-y-1">
+      <span class="text-slate-300">Secondary keywords</span>
+      <input
+        v-model="settings.secondaryKeywords"
+        type="text"
+        placeholder="e.g. on-page seo, meta tags"
+        class="w-full px-3 py-1.5 bg-surface-raised border border-surface-border rounded-lg text-slate-200 placeholder-slate-500"
+      />
+      <span class="text-[10px] text-slate-500">Comma-separated (up to 3 used in the placement matrix)</span>
+    </label>
+
     <label class="flex items-center justify-between gap-3 text-xs">
       <div>
         <span class="text-slate-300 block">Open as side panel</span>
@@ -95,6 +106,16 @@ async function reset() {
         </span>
       </div>
       <input v-model="settings.openAsSidePanel" type="checkbox" class="accent-accent" />
+    </label>
+
+    <label class="flex items-center justify-between gap-3 text-xs">
+      <div>
+        <span class="text-slate-300 block">Auto-analyze on open</span>
+        <span class="text-[10px] text-slate-500">
+          Also available in the sidebar above History. When off, use Refresh / Analyze.
+        </span>
+      </div>
+      <input v-model="settings.autoAnalyzeOnOpen" type="checkbox" class="accent-accent" />
     </label>
 
     <div class="flex gap-2 pt-2">

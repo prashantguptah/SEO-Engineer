@@ -1,6 +1,86 @@
-import type { PageContext } from '../types/seo'
+import type { PageContext, LinkItem } from '../types/seo'
 import type { AnalyzerResult } from '../types/analyzer'
 import { scoreFromChecks } from '../utils/helpers'
+
+const WEAK_ANCHORS = new Set([
+  'click here',
+  'here',
+  'read more',
+  'learn more',
+  'more',
+  'link',
+  'this',
+  'this page',
+  'this link',
+  'website',
+  'page',
+])
+
+export interface InternalLinkRow {
+  href: string
+  path: string
+  depth: number
+  count: number
+  anchors: string[]
+  weakAnchors: number
+  emptyAnchors: number
+  nofollow: boolean
+  selector?: string
+}
+
+function pathDepth(pathname: string): number {
+  return pathname.split('/').filter(Boolean).length
+}
+
+function isWeakAnchor(text: string): boolean {
+  const t = text.trim().toLowerCase().replace(/\s+/g, ' ')
+  if (!t) return false
+  return WEAK_ANCHORS.has(t) || t.length < 3
+}
+
+function buildInternalTable(links: LinkItem[], origin: string): InternalLinkRow[] {
+  const map = new Map<string, InternalLinkRow>()
+
+  for (const link of links.filter((l) => l.isInternal)) {
+    let href = link.href
+    let path = link.href
+    try {
+      const u = new URL(link.href, origin)
+      href = u.origin === origin ? `${u.pathname}${u.search}` : u.href
+      path = u.pathname || '/'
+    } catch {
+      path = link.href.split('?')[0] || link.href
+    }
+
+    const key = href
+    const existing = map.get(key)
+    const text = link.text.trim()
+    if (existing) {
+      existing.count++
+      if (text && !existing.anchors.includes(text) && existing.anchors.length < 5) {
+        existing.anchors.push(text.slice(0, 60))
+      }
+      if (!text) existing.emptyAnchors++
+      else if (isWeakAnchor(text)) existing.weakAnchors++
+      if (link.isNofollow) existing.nofollow = true
+      if (!existing.selector && link.selector) existing.selector = link.selector
+    } else {
+      map.set(key, {
+        href,
+        path,
+        depth: pathDepth(path),
+        count: 1,
+        anchors: text ? [text.slice(0, 60)] : [],
+        weakAnchors: text && isWeakAnchor(text) ? 1 : 0,
+        emptyAnchors: text ? 0 : 1,
+        nofollow: link.isNofollow,
+        selector: link.selector,
+      })
+    }
+  }
+
+  return [...map.values()].sort((a, b) => b.count - a.count || a.path.localeCompare(b.path))
+}
 
 export function analyzeLinks(ctx: PageContext): AnalyzerResult {
   const internal = ctx.links.filter((l) => l.isInternal)
@@ -11,6 +91,10 @@ export function analyzeLinks(ctx: PageContext): AnalyzerResult {
   const broken = ctx.brokenLinks.filter((l) => l.broken)
   const brokenCount = broken.length
   const checkedCount = ctx.brokenLinks.length
+
+  const internalTable = buildInternalTable(ctx.links, ctx.origin)
+  const weakInternal = internalTable.filter((r) => r.weakAnchors > 0 || r.emptyAnchors > 0)
+  const linkedOnce = internalTable.filter((r) => r.count === 1)
 
   const anchorTexts = ctx.links
     .filter((l) => l.text.trim())
@@ -48,6 +132,18 @@ export function analyzeLinks(ctx: PageContext): AnalyzerResult {
     })
   }
 
+  if (weakInternal.length >= 3) {
+    issues.push({
+      id: 'weak-anchors',
+      severity: 'low' as const,
+      problem: `${weakInternal.length} internal destination(s) use weak or empty anchor text`,
+      whyItMatters: 'Generic anchors like “click here” waste relevance signals.',
+      suggestedFix: 'Use descriptive anchors that match the destination topic.',
+      category: 'links',
+      elementSelector: weakInternal[0]?.selector,
+    })
+  }
+
   if (brokenCount > 0) {
     issues.push({
       id: 'broken-links',
@@ -70,8 +166,9 @@ export function analyzeLinks(ctx: PageContext): AnalyzerResult {
       emptyAnchor.length === 0,
       ctx.links.length > 0,
       checkedCount === 0 || brokenCount === 0,
+      weakInternal.length < 3,
     ],
-    [2, 1, 1, 2, 1, 2],
+    [2, 1, 1, 2, 1, 2, 1],
   )
 
   return {
@@ -90,6 +187,10 @@ export function analyzeLinks(ctx: PageContext): AnalyzerResult {
       brokenLinkDetails: broken.slice(0, 5),
       enrichSkipped: ctx.enrichSkipped?.includes('broken-links') ?? false,
       anchorTexts,
+      internalTable: internalTable.slice(0, 40),
+      uniqueInternalDestinations: internalTable.length,
+      linkedOnceCount: linkedOnce.length,
+      weakAnchorDestinations: weakInternal.length,
     },
     issues,
     strengths,

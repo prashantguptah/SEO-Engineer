@@ -37,6 +37,7 @@ export function useAnalysis() {
           hydrationWaitMs: settings.value.hydrationWaitMs,
           analysisBudgetMs: settings.value.analysisBudgetMs,
           targetKeyword: settings.value.targetKeyword,
+          secondaryKeywords: settings.value.secondaryKeywords,
         },
       })
       if (response?.error) {
@@ -46,8 +47,9 @@ export function useAnalysis() {
       }
       if (response?.report) {
         const report = response.report as SeoReport
-        const sparkline = await saveReportToStorage(report)
+        const { sparkline, reportDiff } = await saveReportToStorage(report)
         report.scoreHistory = sparkline
+        if (reportDiff) report.reportDiff = reportDiff
         store.setReport(report)
       } else if (!store.report) {
         store.setError('No report received')
@@ -56,6 +58,25 @@ export function useAnalysis() {
       const msg = err instanceof Error ? err.message : 'Analysis failed'
       if (!store.report) store.setError(msg)
       else toast(`Refresh failed: ${msg}`)
+    } finally {
+      store.setLoading(false)
+    }
+  }
+
+  /** Load cached report only — used when auto-analyze is off. */
+  async function loadCachedOnly() {
+    store.setLoading(true)
+    store.error = null
+    try {
+      await loadSettings()
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+      const tabUrl = tab?.url
+      if (tabUrl) {
+        const cached = await loadCachedReport(tabUrl)
+        if (cached) store.setReport(cached)
+      }
+    } catch {
+      // ignore — idle UI will show
     } finally {
       store.setLoading(false)
     }
@@ -91,5 +112,5 @@ export function useAnalysis() {
     toast('Opening print dialog for PDF...')
   }
 
-  return { analyze, copyReportJson, copyReportMarkdown, downloadReport, exportPdf }
+  return { analyze, loadCachedOnly, copyReportJson, copyReportMarkdown, downloadReport, exportPdf }
 }

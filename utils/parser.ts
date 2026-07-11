@@ -1,4 +1,4 @@
-import type { PageContext, HeadingItem, LinkItem, ImageItem } from '../types/seo'
+import type { PageContext, HeadingItem, LinkItem, ImageItem, HreflangEntry } from '../types/seo'
 import { queryAllDeep, getSelector } from './dom'
 import { createEmptyEnrichment } from './enrich'
 
@@ -23,6 +23,18 @@ export function buildPageContext(doc: Document, win: Window): PageContext {
       rel: (el.getAttribute('rel') || '').toLowerCase(),
       href: el.getAttribute('href') || '',
     })
+  })
+
+  const hreflang: HreflangEntry[] = []
+  doc.querySelectorAll('link[hreflang]').forEach((el) => {
+    const lang = el.getAttribute('hreflang') || ''
+    const href = el.getAttribute('href') || ''
+    if (!lang || !href) return
+    try {
+      hreflang.push({ lang, href: new URL(href, url).href })
+    } catch {
+      hreflang.push({ lang, href })
+    }
   })
 
   const headings: HeadingItem[] = []
@@ -141,5 +153,6 @@ export function buildPageContext(doc: Document, win: Window): PageContext {
     wordCount: bodyText.trim().split(/\s+/).filter(Boolean).length,
     favicon: faviconUrl,
     ...enrichment,
+    hreflang,
   }
 }
