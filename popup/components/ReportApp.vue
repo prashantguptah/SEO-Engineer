@@ -112,7 +112,7 @@ watch(
           <h1 class="text-sm font-semibold text-white truncate">
             {{
               store.report?.title ||
-              (store.loading ? 'Analyzing page…' : 'SEO Reverse Engineer')
+              (store.loading ? 'Analyzing page…' : 'keywordwalks')
             }}
           </h1>
           <p class="text-xs text-slate-500 truncate">
@@ -147,7 +147,7 @@ watch(
           >
             <p class="text-sm text-red-400">{{ store.error }}</p>
             <button
-              class="px-4 py-2 text-sm bg-accent hover:bg-accent-glow text-white rounded-lg"
+              class="px-4 py-2 text-sm bg-accent hover:bg-accent-glow text-accent-ink font-semibold rounded-lg"
               @click="analyze(false)"
             >
               Retry Analysis
@@ -221,7 +221,7 @@ watch(
           {{ overlayActive ? 'Clear overlay' : 'Overlay' }}
         </button>
         <button
-          class="flex-1 min-w-[64px] px-2 py-1.5 text-[10px] font-medium bg-accent hover:bg-accent-glow text-white rounded-lg"
+          class="flex-1 min-w-[64px] px-2 py-1.5 text-[10px] font-semibold bg-accent hover:bg-accent-glow text-accent-ink rounded-lg"
           @click="analyze(false)"
         >
           Refresh

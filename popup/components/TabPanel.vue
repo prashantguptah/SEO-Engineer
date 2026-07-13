@@ -88,7 +88,7 @@ const isToolTab = computed(() => isSettings.value || isHistory.value || isCompar
       <p class="text-sm text-slate-300">Auto-analyze is off</p>
       <p class="text-xs text-slate-500">Click Analyze to run a report for this page.</p>
       <button
-        class="px-4 py-2 text-sm bg-accent hover:bg-accent-glow text-white rounded-lg"
+        class="px-4 py-2 text-sm bg-accent hover:bg-accent-glow text-accent-ink font-semibold rounded-lg"
         @click="emit('analyze')"
       >
         Analyze page

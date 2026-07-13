@@ -65,7 +65,7 @@ async function ensureContextMenu() {
     await chrome.contextMenus.removeAll()
     chrome.contextMenus.create({
       id: CONTEXT_MENU_ID,
-      title: 'Analyze with SEO Reverse Engineer',
+      title: 'Analyze with keywordwalks',
       contexts: ['page', 'frame'],
       documentUrlPatterns: ['http://*/*', 'https://*/*'],
     })

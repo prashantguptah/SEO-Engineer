@@ -120,7 +120,7 @@ async function reset() {
 
     <div class="flex gap-2 pt-2">
       <button
-        class="flex-1 px-3 py-2 text-xs bg-accent hover:bg-accent-glow text-white rounded-lg"
+        class="flex-1 px-3 py-2 text-xs bg-accent hover:bg-accent-glow text-accent-ink font-semibold rounded-lg"
         @click="save"
       >
         Save

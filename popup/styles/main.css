@@ -10,8 +10,8 @@ html, body {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background: #0f1117;
-  color: #e2e8f0;
+  background: #000000;
+  color: #e8f7f8;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
@@ -38,12 +38,12 @@ html:has(body.sidepanel-body) {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #1a3336;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: #245055;
 }
 
 @keyframes shimmer {
@@ -52,7 +52,7 @@ html:has(body.sidepanel-body) {
 }
 
 .skeleton {
-  background: linear-gradient(90deg, #1e2533 25%, #2a3344 50%, #1e2533 75%);
+  background: linear-gradient(90deg, #0e1719 25%, #163033 50%, #0e1719 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }

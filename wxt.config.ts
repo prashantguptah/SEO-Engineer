@@ -9,13 +9,13 @@ export default defineConfig({
   outDir: 'dist',
   modules: ['@wxt-dev/module-vue'],
   manifest: {
-    name: 'SEO Reverse Engineer',
-    description: 'Reverse engineer why a page ranks well in search engines',
+    name: 'keywordwalks',
+    description: 'Keywords, research, and on-page SEO analysis — right in your browser',
     version: '1.1.0',
     permissions: ['activeTab', 'scripting', 'storage', 'sidePanel', 'contextMenus'],
     host_permissions: ['<all_urls>'],
     action: {
-      default_title: 'SEO Reverse Engineer',
+      default_title: 'keywordwalks',
     },
     commands: {
       'analyze-page': {
@@ -23,13 +23,13 @@ export default defineConfig({
           default: 'Alt+Shift+S',
           mac: 'Alt+Shift+S',
         },
-        description: 'Open SEO Reverse Engineer and analyze the page',
+        description: 'Open keywordwalks and analyze the page',
       },
     },
     icons: {
-      16: '/icon.svg',
-      48: '/icon.svg',
-      128: '/icon.svg',
+      16: '/icon.png',
+      48: '/icon.png',
+      128: '/icon.png',
     },
   },
   vite: () => ({

@@ -9,13 +9,15 @@ export default {
     extend: {
       colors: {
         surface: {
-          DEFAULT: '#0f1117',
-          raised: '#161b26',
-          border: '#1e2533',
+          DEFAULT: '#000000',
+          raised: '#0a1012',
+          border: '#122022',
         },
         accent: {
-          DEFAULT: '#6366f1',
-          glow: '#818cf8',
+          DEFAULT: '#00e8f0',
+          glow: '#33eef5',
+          lime: '#7cff6b',
+          ink: '#001214',
         },
       },
       animation: {

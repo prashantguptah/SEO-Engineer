@@ -36,7 +36,7 @@ function makeReport(): SeoReport {
 describe('buildBrandedReportHtml', () => {
   it('includes brand, executive summary, scores, and top fixes', () => {
     const html = buildBrandedReportHtml(makeReport())
-    expect(html).toContain('SEO Reverse Engineer')
+    expect(html).toContain('keywordwalks')
     expect(html).toContain('Executive summary')
     expect(html).toContain('Score breakdown')
     expect(html).toContain('Top fixes')

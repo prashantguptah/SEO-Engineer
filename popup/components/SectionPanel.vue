@@ -191,7 +191,7 @@ function issueStatus(id: string): FixStatus {
         <p class="text-xs text-accent-glow mt-2">Fix: {{ rec.suggestedFix }}</p>
         <pre
           v-if="rec.fixSnippet"
-          class="mt-2 p-2 rounded bg-[#0c0e14] border border-surface-border text-[10px] text-slate-300 overflow-x-auto whitespace-pre-wrap font-mono"
+          class="mt-2 p-2 rounded bg-black border border-surface-border text-[10px] text-slate-300 overflow-x-auto whitespace-pre-wrap font-mono"
         >{{ rec.fixSnippet }}</pre>
 
         <div class="flex gap-2 mt-2">

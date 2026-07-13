@@ -20,7 +20,7 @@ function injectHighlightStyles() {
   style.id = HIGHLIGHT_STYLE_ID
   style.textContent = `
     .seo-re-highlight {
-      outline: 3px solid #6366f1 !important;
+      outline: 3px solid #00e8f0 !important;
       outline-offset: 2px !important;
       transition: outline 0.2s ease;
     }

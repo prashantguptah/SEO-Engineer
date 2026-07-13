@@ -51,7 +51,7 @@ const sparklinePoints = computed(() => {
     <div class="flex items-center gap-4">
       <div class="relative flex-shrink-0">
         <svg class="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
-          <circle cx="40" cy="40" r="34" fill="none" stroke="#1e2533" stroke-width="6" />
+          <circle cx="40" cy="40" r="34" fill="none" stroke="#122022" stroke-width="6" />
           <circle
             cx="40" cy="40" r="34" fill="none"
             :stroke="scores.overall >= 80 ? '#34d399' : scores.overall >= 60 ? '#fbbf24' : '#f87171'"
@@ -91,7 +91,7 @@ const sparklinePoints = computed(() => {
         <polyline
           :points="sparklinePoints"
           fill="none"
-          stroke="#6366f1"
+          stroke="#00e8f0"
           stroke-width="1.5"
           stroke-linecap="round"
           stroke-linejoin="round"
