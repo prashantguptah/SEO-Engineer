@@ -5,12 +5,7 @@ export function useHighlight() {
 
   async function highlightOnPage(selector: string) {
     try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-      if (!tab?.id) {
-        toast('No active tab')
-        return
-      }
-      const res = await chrome.tabs.sendMessage(tab.id, {
+      const res = await chrome.runtime.sendMessage({
         type: 'HIGHLIGHT_ELEMENT',
         selector,
       })

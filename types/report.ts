@@ -61,6 +61,7 @@ export interface SeoReport {
 }
 
 export type MessageType =
+  | 'PING'
   | 'ANALYZE_PAGE'
   | 'RUN_ANALYSIS'
   | 'HIGHLIGHT_ELEMENT'
@@ -91,5 +92,11 @@ export interface AnalysisResponse {
 
 export interface HighlightResponse {
   ok: boolean
+  error?: string
+}
+
+export interface OverlayActionResponse {
+  ok: boolean
+  count?: number
   error?: string
 }

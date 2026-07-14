@@ -93,6 +93,10 @@ export default defineContentScript({
     injectHighlightStyles()
 
     chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+      if (message.type === 'PING') {
+        sendResponse({ ok: true })
+        return true
+      }
       if (message.type === 'RUN_ANALYSIS') {
         executeAnalysis(message.options).then(sendResponse)
         return true

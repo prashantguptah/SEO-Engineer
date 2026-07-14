@@ -60,13 +60,8 @@ export function useOverlay() {
   const active = ref(false)
 
   async function send(type: 'SHOW_OVERLAY' | 'CLEAR_OVERLAY', markers?: OverlayMarker[]) {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-    if (!tab?.id) {
-      toast('No active tab')
-      return null
-    }
     try {
-      return await chrome.tabs.sendMessage(tab.id, { type, markers })
+      return await chrome.runtime.sendMessage({ type, markers })
     } catch {
       toast('Could not reach page — try refreshing')
       return null

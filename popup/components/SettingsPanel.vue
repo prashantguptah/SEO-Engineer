@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useSettings } from '../composables/useSettings'
 import { useToast } from '../composables/useToast'
+import { PRIVACY_POLICY_URL } from '../constants'
 
 const emit = defineEmits<{ close: []; saved: [] }>()
 
@@ -117,6 +118,22 @@ async function reset() {
       </div>
       <input v-model="settings.autoAnalyzeOnOpen" type="checkbox" class="accent-accent" />
     </label>
+
+    <div class="rounded-lg border border-surface-border bg-surface-raised/60 px-3 py-2.5 space-y-1.5">
+      <p class="text-xs text-slate-300">Privacy</p>
+      <p class="text-[10px] text-slate-500 leading-relaxed">
+        Analysis runs on your device. Reports, history, and settings stay in Chrome local storage
+        unless you export them yourself.
+      </p>
+      <a
+        :href="PRIVACY_POLICY_URL"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-block text-[11px] text-accent-glow hover:text-accent underline-offset-2 hover:underline"
+      >
+        Privacy Policy
+      </a>
+    </div>
 
     <div class="flex gap-2 pt-2">
       <button

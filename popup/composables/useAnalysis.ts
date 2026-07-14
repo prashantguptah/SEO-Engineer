@@ -3,6 +3,7 @@ import { useReportStore } from '../stores/report'
 import { reportToMarkdown } from '../../utils/markdown'
 import { exportReportPdf } from '../../utils/pdf'
 import type { SeoReport } from '../../types/report'
+import { isRestrictedUrl, restrictedPageMessage } from '../../utils/restricted-url'
 import { loadCachedReport, saveReportToStorage } from './useReportHistory'
 import { useToast } from './useToast'
 import { useSettings } from './useSettings'
@@ -21,6 +22,11 @@ export function useAnalysis() {
       await loadSettings()
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
       const tabUrl = tab?.url
+
+      if (isRestrictedUrl(tabUrl)) {
+        store.setError(restrictedPageMessage(tabUrl))
+        return
+      }
 
       if (showCache && tabUrl) {
         const cached = await loadCachedReport(tabUrl)
@@ -71,6 +77,10 @@ export function useAnalysis() {
       await loadSettings()
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
       const tabUrl = tab?.url
+      if (isRestrictedUrl(tabUrl)) {
+        store.setError(restrictedPageMessage(tabUrl))
+        return
+      }
       if (tabUrl) {
         const cached = await loadCachedReport(tabUrl)
         if (cached) store.setReport(cached)

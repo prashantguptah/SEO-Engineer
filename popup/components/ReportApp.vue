@@ -146,6 +146,10 @@ watch(
             class="flex-1 flex flex-col items-center justify-center gap-4 text-center px-4"
           >
             <p class="text-sm text-red-400">{{ store.error }}</p>
+            <p class="text-xs text-slate-500 max-w-sm leading-relaxed">
+              Open a normal http:// or https:// website in this tab. Browser pages, extension pages,
+              and the Chrome Web Store cannot be analyzed.
+            </p>
             <button
               class="px-4 py-2 text-sm bg-accent hover:bg-accent-glow text-accent-ink font-semibold rounded-lg"
               @click="analyze(false)"
